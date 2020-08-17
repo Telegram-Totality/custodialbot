@@ -6,7 +6,7 @@ from totality import AccountT, post_address, get_call_data, create_result, updat
 
 PK, TX = range(2)
 # Define a few command handlers. These usually take the two arguments update and
-# context. Error handlers also receive the raised TelegramError object in error.    
+# context. Error handlers also receive the raised TelegramError object in error.
 def start(update, context):
     """Send a message when the command /start is issued."""
     user_data = context.user_data
@@ -32,7 +32,7 @@ def start(update, context):
         ctx = check_for_tx()
         if ctx:
             return ctx
-        
+
     if "call_hash" in user_data:
         del user_data['call_hash']
 
@@ -50,14 +50,14 @@ If you prefer a non custodial way, controlling your own private key. Please down
     acc = AccountT.from_storage(update.effective_user.id)
     if not acc or acc.address != update.effective_user.address:
         update.message.reply_text("You have been using Totality products earlier, haven't you? "
-            "The address is <b>%s</b>. Please share the private key of this address. (/help)" % update.effective_user.address, 
+            "The address is <b>%s</b>. Please share the private key of this address. (/help)" % update.effective_user.address,
             parse_mode="HTML")
         return PK
-    
+
     update.message.reply_text("Your address <b>%s</b> is setup." % update.effective_user.address, parse_mode="HTML")
     return ConversationHandler.END
 
-    
+
 def pk(update, context):
     pk = update.message.text
     acc = AccountT.from_key(pk)
@@ -70,12 +70,12 @@ def pk(update, context):
     else:
         post_address(update.effective_user, acc.address)
         update.message.reply_text("Your address is %s" % acc.address)
-    
+
     acc.store_key(update.effective_user.id)
     return ConversationHandler.END
 
 def pk_new(update, context):
-    if update.effective_user.address: 
+    if update.effective_user.address:
         update.message.reply_text("Looks like you already have an account, press /start")
         return ConversationHandler.END
 
@@ -97,10 +97,10 @@ def cancel(update, context):
 def tx(update, context):
     if update.message.text == "No":
         return ConversationHandler.END
-    
+
     acc = AccountT.from_storage(update.effective_user.id)
     assert acc.address == update.effective_user.address, "Address is wrong"
-    
+
     user_data = context.user_data
     call_hash = user_data["call_hash"]
 
@@ -115,7 +115,7 @@ def tx(update, context):
 
     del user_data["call_hash"]
     update.message.reply_text("Succesfully published transaction")
-    
+
 
 def main():
     """Start the bot."""
@@ -126,7 +126,7 @@ def main():
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
-    
+
     # Add conversation handler with the states GENDER, PHOTO, LOCATION and BIO
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
@@ -136,7 +136,7 @@ def main():
                 CommandHandler('help', pk_help),
                 CommandHandler('new', pk_new)],
             TX: [MessageHandler(Filters.regex('^(Yes|No)$'), tx)]
-            
+
         },
 
         fallbacks=[CommandHandler('cancel', cancel), CommandHandler('start', start)]

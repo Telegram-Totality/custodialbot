@@ -7,7 +7,7 @@ from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from eth_utils.curried import combomethod
 
-from cachetools import cached, TTLCache 
+from cachetools import cached, TTLCache
 from web3 import Web3
 
 storage = os.path.join("storage")
