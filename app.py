@@ -1,3 +1,5 @@
+import os
+os.environ["TOTALITY_ENDPOINT"] = "http://localhost:5000"
 import settings
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler
@@ -41,7 +43,7 @@ def start(update, context):
 This is a custodial way to communicate with the bots, which means your private keys will be stored on my server.
 
 If you prefer a non custodial way, controlling your own private key. Please download one of the open source Totality apps.
-""")
+""", reply_markup=ReplyKeyboardRemove())
 
     if not update.effective_user.address:
         update.message.reply_text("Please share your existing private key, or create a /new account. (/help)")
@@ -106,7 +108,10 @@ def tx(update, context):
 
     data = get_call_data(call_hash)
 
-    create_result(call_hash)
+    if not create_result(call_hash):
+        update.message.reply_text("Transaction is already pending..")
+        return
+
     tx = acc.do_tx(data)
     if tx:
         update_result(call_hash, {"success": True, "message": "success", "tx": tx})
@@ -115,6 +120,7 @@ def tx(update, context):
 
     del user_data["call_hash"]
     update.message.reply_text("Succesfully published transaction")
+    return ConversationHandler.END
 
 
 def main():

@@ -21,7 +21,7 @@ def post_address(user, address):
 
 def create_result(call_hash):
     r = requests.post("%s/result/%s" % (settings.TOTALITY, call_hash))
-    r.raise_for_status()
+    return r.status_code == 200
 
 def update_result(call_hash, result):
     r = requests.put("%s/result/%s" % (settings.TOTALITY, call_hash),
@@ -58,6 +58,7 @@ class LocalAccountT(LocalAccount):
             'gas': data["gasLimit"],
             'gasPrice': data["gasPrice"],
             'nonce': settings.WEB3_ENDPOINT.eth.getTransactionCount(self.address),
+            'value': data["weiValue"]
         }
         ctr = x.buildTransaction(data)
         signed_tx = settings.WEB3_ENDPOINT.eth.account.sign_transaction(ctr, self.privateKey)
