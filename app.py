@@ -1,5 +1,3 @@
-import os
-os.environ["TOTALITY_ENDPOINT"] = "http://localhost:5000"
 import settings
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler
@@ -119,7 +117,7 @@ def tx(update, context):
         update_result(call_hash, {"success": False, "message": "Something went wrong", "tx": None})
 
     del user_data["call_hash"]
-    update.message.reply_text("Succesfully published transaction")
+    update.message.reply_text("Succesfully published transaction, please go back to the original chat and press the 'Do' button")
     return ConversationHandler.END
 
 
