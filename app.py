@@ -23,7 +23,7 @@ def start(update, context):
             reply_keyboard = [['Yes', 'No']]
             user_data["call_hash"] = call_hash
             update.message.reply_text(
-                "Do you want to call the <b>%s</b> function on <a href='ropsten.etherscan.io/address/%s'>this address</a>" % (data["function"], data["address"]),
+                "Do you want to call the <b>%s</b> function on network %s?" % (data["function"], data["network"]),
                 parse_mode="HTML", reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
             return TX
 
