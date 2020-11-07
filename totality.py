@@ -13,6 +13,10 @@ from web3 import Web3
 
 storage = os.path.join("storage")
 
+def get_address(user, id):
+    r = requests.get("%s/tg/%s" % (settings.TOTALITY, str(user.id)))
+    return r.json()["address"]
+
 def post_address(user, address):
     user.address_clear()
     r = requests.post("%s/tg/%s" % (settings.TOTALITY, str(user.id)),
@@ -23,6 +27,13 @@ def post_address(user, address):
 def create_result(call_hash):
     r = requests.post("%s/result/%s" % (settings.TOTALITY, call_hash))
     return r.status_code == 200
+
+def get_bot_info(secret):
+    r = requests.get("%s/bot" % settings.TOTALITY, headers={
+        "Authorization": secret
+    })
+    r.raise_for_status()
+    return r.json()
 
 def update_result(call_hash, result):
     r = requests.put("%s/result/%s" % (settings.TOTALITY, call_hash),
@@ -47,12 +58,8 @@ class LocalAccountT(LocalAccount):
             f.write(self.key_str)
 
     def do_tx(self, data):
-        WEB3_ENDPOINT = None
-        if data["network"] == 1:
-            WEB3_ENDPOINT=Web3(HTTPProvider("https://mainnet.infura.io/v3/%s" % settings.INFURA_TOKEN))
-        elif data["network"] == 3:
-            WEB3_ENDPOINT=Web3(HTTPProvider("https://ropsten.infura.io/v3/%s" % settings.INFURA_TOKEN))
-        else:
+        WEB3_ENDPOINT= Web3(HTTPProvider(settings.WEB3_ENDPOINT))
+        if data["network"] != settings.WEB3_CHAIN_ID:
             return None
 
         address = Web3.toChecksumAddress(data["address"])
