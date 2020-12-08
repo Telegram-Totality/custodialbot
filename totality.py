@@ -13,16 +13,20 @@ from web3 import Web3
 
 storage = os.path.join("storage")
 
-def get_address(user, id):
-    r = requests.get("%s/tg/%s" % (settings.TOTALITY, str(user.id)))
+def get_address(id):
+    r = requests.get("%s/tg/%s" % (settings.TOTALITY, str(id)))
     return r.json()["address"]
 
-def post_address(user, address):
-    user.address_clear()
-    r = requests.post("%s/tg/%s" % (settings.TOTALITY, str(user.id)),
+def post_address_raw(id, address):
+    r = requests.post("%s/tg/%s" % (settings.TOTALITY, str(id)),
         data={"address": address}
     )
     r.raise_for_status()
+
+def post_address(user, address):
+    user.address_clear()
+    post_address_raw(user.id, address)
+
 
 def create_result(call_hash):
     r = requests.post("%s/result/%s" % (settings.TOTALITY, call_hash))
@@ -78,7 +82,11 @@ class LocalAccountT(LocalAccount):
         }
         ctr = x.buildTransaction(data)
         signed_tx = WEB3_ENDPOINT.eth.account.sign_transaction(ctr, self.privateKey)
-        WEB3_ENDPOINT.eth.sendRawTransaction(signed_tx.rawTransaction)
+        try:
+            WEB3_ENDPOINT.eth.sendRawTransaction(signed_tx.rawTransaction)
+        except ValueError as e:
+            print(e)
+            return None
         return Web3.toHex(signed_tx["hash"])
 
 class AccountT(Account):

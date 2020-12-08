@@ -7,6 +7,7 @@ from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler
 
 import database
+import ethereum
 from totality import AccountT, post_address, get_call_data, create_result, update_result, get_bot_info
 
 PK, LIMIT = range(2)
@@ -24,24 +25,22 @@ def start(update, context):
         return True
 
     payload = update.message.text[7:]
-    if payload.startswith("limit-"):
-        if check_for_account():
-            secret = payload[6:]
-            try:
-                bot_info = get_bot_info(secret)
-            except requests.exceptions.HTTPError:
-                update.message.reply_text("Invalid referal")
-                return
+    if payload.startswith("limit-") and check_for_account():
+        secret = payload[6:]
+        try:
+            bot_info = get_bot_info(secret)
+        except requests.exceptions.HTTPError:
+            update.message.reply_text("Invalid referal")
+            return
 
-            with database.session_scope() as s:
-                limit = database.SpendingLimits.getsert(s, update.effective_user.address, secret, bot_info["erc20"])
+        with database.session_scope() as s:
+            limit = database.SpendingLimits.getsert(s, update.effective_user.address, secret, bot_info["erc20"])
 
-                update.message.reply_text("%s is asking you to change your spending limit, your current limit"
-                " is %s %s, change to?" % (bot_info["handle"], limit.get_user_limit(), limit.token),
-                reply_markup=ReplyKeyboardMarkup([["10", "100", "1000"]], one_time_keyboard=True))
-            user_data["secret"] = secret
-            return LIMIT
-
+            update.message.reply_text("%s is asking you to change your spending limit, your current limit"
+            " is %s %s, change to?" % (bot_info["handle"], limit.get_user_limit(), limit.token),
+            reply_markup=ReplyKeyboardMarkup([["10", "100", "1000"]], one_time_keyboard=True))
+        user_data["secret"] = secret
+        return LIMIT
 
     if "call_hash" in user_data:
         del user_data['call_hash']
@@ -117,6 +116,18 @@ def limit(update, context):
 
     return ConversationHandler.END
 
+def balances(update, context):
+    rt = ""
+    for ticker, address in settings.TOKENS.items():
+        amount = ethereum.balance_of(address, update.effective_user.address)
+        rt += "%s - %s\n" % (ticker, amount)
+
+    update.message.reply_text("Your balances are: \n\n%s" % rt)
+
+def pk_print(update, context):
+    user = AccountT.from_storage(update.effective_user.id)
+    update.message.reply_text("Your private key is: %s" % user.key_str)
+
 def main():
     """Start the bot."""
     # Create the Updater and pass it your bot's token.
@@ -141,7 +152,8 @@ def main():
 
         fallbacks=[CommandHandler('cancel', cancel), CommandHandler('start', start)]
     )
-
+    dp.add_handler(CommandHandler("balances", balances))
+    dp.add_handler(CommandHandler("pk", pk_print))
     dp.add_handler(conv_handler)
 
     # Start the Bot

@@ -5,6 +5,7 @@ import totality
 import settings
 import database
 import telegram
+import ethereum
 app = Flask(__name__)
 
 @app.route('/limit/<userid>', methods=["GET"])
@@ -53,9 +54,31 @@ def execute_tx(txhash):
             "message": "Contract is not righ contract, got %s" % settings.TOKENS.get(bot_info["erc20"]),
             "code": "WRONG_CONTRACT"}), 400
 
+    if call["params"]["recipient"] == "user":
+        try:
+            call["params"]["recipient"] = totality.get_address(user)
+        except KeyError:
+            acc = totality.AccountT.create()
+            acc.store_key(user)
+            totality.post_address_raw(user, acc.address)
+            call["params"]["recipient"] = acc.address
+
+    signer = user
+    if call["signer"]:
+        signer = call["signer"]
+
+
+    signer_address = totality.get_address(signer)
+    balance = ethereum.balance_of(settings.TOKENS.get(bot_info["erc20"]), signer_address, print_user=False)
+    if balance < call["params"]["amount"]:
+         return jsonify({
+            "success": False,
+            "message": "Insufficient balance",
+            "code": "NO_BALANCE"}), 400
+
     user_limit = None
     with database.session_scope() as s:
-        limit = database.SpendingLimits.getsert(s, user, secret, bot_info["erc20"])
+        limit = database.SpendingLimits.getsert(s, signer, secret, bot_info["erc20"])
         if not totality.create_result(txhash):
             return jsonify({
                 "success": False,
@@ -75,16 +98,14 @@ def execute_tx(txhash):
             return call["params"]["amount"] / 1000000
         return call["params"]["amount"] / 1000000000000000000
 
-    acc = totality.AccountT.from_storage(user)
+    acc = totality.AccountT.from_storage(signer)
     tx = acc.do_tx(call)
     if tx:
         l = {"success": True, "message": "success", "tx": tx}
+        bot = telegram.Bot(token=settings.BOT_TOKEN)
+        bot.sendMessage(chat_id=signer, text="%s transferred %s %s to %s, %s %s approval left." % (
+        bot_info["handle"], call_user_limit(), bot_info["erc20"], call["params"]["recipient"], user_limit, bot_info["erc20"]))
     else:
         l = {"success": False, "message": "Something went wrong", "code": "UNKNOWN_ERROR"}
     totality.update_result(txhash, l)
-
-    bot = telegram.Bot(token=settings.BOT_TOKEN)
-    bot.sendMessage(chat_id=user, text="%s transferred %s %s to %s, %s %s approval left." % (
-        bot_info["handle"], call_user_limit(), bot_info["erc20"], call["params"]["recipient"], user_limit, bot_info["erc20"]))
-
     return jsonify(l)
